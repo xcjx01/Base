@@ -3,93 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mint $SANEX — 1 USDC = 5000 $SANEX</title>
+  <title>Mint $SANEX — Bayar 1 USDC (Base)</title>
 
-  <!-- Ethers & Web3Modal -->
-  <script type="module">
-    import { ethers } from "https://cdn.jsdelivr.net/npm/ethers@6.13.2/+esm";
-    import { Web3Modal } from "https://unpkg.com/@web3modal/html@3.5.2/dist/index.js";
-    import { EthereumClient, w3mConnectors, w3mProvider } from "https://unpkg.com/@web3modal/ethereum@3.5.2/dist/index.js";
-    import { configureChains, createConfig, getAccount, getWalletClient } from "https://unpkg.com/viem@2.8.6/+esm";
-    import { base } from "https://unpkg.com/@wagmi/chains@1.7.0/+esm";
+  <!-- Ethers.js -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js"></script>
 
-    const chains = [base];
-    const projectId = "eafdf7b25a4393acc8d20999a23026a4";  // ganti dengan Project ID WalletConnect kamu jika punya
-
-    const { publicClient } = configureChains(chains, [w3mProvider({ projectId })]);
-    const wagmiConfig = createConfig({
-      autoConnect: true,
-      connectors: w3mConnectors({ projectId, version: 2, chains }),
-      publicClient
-    });
-
-    const ethereumClient = new EthereumClient(wagmiConfig, chains);
-    const modal = new Web3Modal({ projectId, themeMode: "dark" }, ethereumClient);
-
-    // referensi elemen HTML
-    const connectBtn = document.getElementById("connectBtn");
-    const mintBtn = document.getElementById("mintBtn");
-    const statusEl = document.getElementById("status");
-    const setStatus = (m) => (statusEl.textContent = m);
-
-    let walletClient = null;
-
-    connectBtn.onclick = async () => {
-      try {
-        await modal.openModal();
-        const acc = getAccount();
-        if (acc.address) {
-          setStatus(`✅ Wallet terhubung: ${acc.address.slice(0,6)}...${acc.address.slice(-4)}`);
-          mintBtn.disabled = false;
-        }
-      } catch (e) {
-        console.error(e);
-        setStatus("❌ Tidak bisa connect wallet.");
-      }
-    };
-
-    mintBtn.onclick = async () => {
-      try {
-        walletClient = await getWalletClient();
-        if (!walletClient) return modal.openModal();
-
-        const provider = new ethers.BrowserProvider(walletClient.transport);
-        const signer = await provider.getSigner();
-
-        const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32d4f71b54bdA02913"; // USDC Base
-        const RECIPIENT = "0x62Ae4503A0430D94ACebF3C3427a940E85511111";
-        const USDC_DECIMALS = 6;
-
-        const token = new ethers.Contract(
-          USDC_ADDRESS,
-          ["function transfer(address to,uint256 amount) public returns (bool)"],
-          signer
-        );
-
-        const amount = ethers.parseUnits("1", USDC_DECIMALS);
-        setStatus("💳 Mengirim 1 USDC ke " + RECIPIENT + "...");
-        const tx = await token.transfer(RECIPIENT, amount);
-        setStatus("⏳ Menunggu konfirmasi...\nTx hash: " + tx.hash);
-        const receipt = await tx.wait();
-
-        if (receipt.status === 1n) {
-          setStatus("✅ Mint berhasil! Tx: " + receipt.hash);
-        } else {
-          setStatus("⚠️ Transaksi gagal.");
-        }
-      } catch (err) {
-        console.error(err);
-        setStatus("❌ Error: " + (err.message || err));
-      }
-    };
-  </script>
+  <!-- WalletConnect v2 -->
+  <script src="https://unpkg.com/@walletconnect/ethereum-provider@2.9.0/dist/umd/index.min.js"></script>
 
   <style>
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: url('https://images.unsplash.com/photo-1622495899873-9c72098e2b5f?auto=format&fit=crop&w=1600&q=80')
-        no-repeat center center fixed;
-      background-size: cover;
+      background: url('https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
       color: #f1f5f9;
       display: flex;
       justify-content: center;
@@ -98,17 +23,14 @@
       margin: 0;
     }
     .card {
-      background: rgba(0,0,0,0.6);
-      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(12px);
       border-radius: 16px;
       padding: 24px;
       text-align: center;
-      max-width: 380px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-      backdrop-filter: blur(10px);
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
     }
-    h1 { font-size: 22px; margin: 0 0 8px; }
-    p { color: #cbd5e1; margin-bottom: 20px; }
     button {
       background: linear-gradient(90deg,#2563eb,#14b8a6);
       color: white;
@@ -119,25 +41,103 @@
       cursor: pointer;
       font-size: 16px;
       transition: all 0.25s ease;
-      margin: 5px;
+      margin: 10px 0;
     }
     button:hover { opacity: 0.85; }
     .status {
       margin-top: 16px;
       font-size: 14px;
-      color: #94a3b8;
+      color: #cbd5e1;
       white-space: pre-wrap;
     }
   </style>
 </head>
+
 <body>
   <div class="card">
-    <p>Follow on X: <strong>@cat_sanex</strong></p>
     <h1>Mint $SANEX</h1>
-    <p>1 USDC → 5000 $SANEX</p>
+    <p>1 USDC = 5000 $SANEX</p>
     <button id="connectBtn">🔗 Connect Wallet</button>
-    <button id="mintBtn" disabled>Mint Now</button>
-    <div class="status" id="status">Wallet belum terhubung…</div>
+    <button id="mintBtn" style="display:none;">💳 Mint Now</button>
+    <div class="status" id="status">Menunggu koneksi wallet...</div>
   </div>
+
+  <script>
+    const PROJECT_ID     = "d2f45a96186ebbd40a192aa7c347fbe7";
+    const BASE_CHAIN_ID  = 8453;
+    const RECIPIENT      = "0x62Ae4503A0430D94ACebF3C3427a940E85511111";
+    const USDC_ADDRESS   = "0x833589fCD6eDb6E08f4c7C32d4f71b54bdA02913"; // USDC on Base
+    const USDC_DECIMALS  = 6;
+
+    let provider, signer, userAddress;
+
+    const connectBtn = document.getElementById("connectBtn");
+    const mintBtn    = document.getElementById("mintBtn");
+    const statusEl   = document.getElementById("status");
+    const setStatus  = (msg) => statusEl.textContent = msg;
+
+    async function connectWallet() {
+      try {
+        // pastikan EthereumProvider ada
+        if (!window.WalletConnectEthereumProvider) {
+          setStatus("❌ Library WalletConnect gagal dimuat. Coba reload halaman lagi.");
+          return;
+        }
+
+        const wcProvider = await window.WalletConnectEthereumProvider.init({
+          projectId: PROJECT_ID,
+          chains: [BASE_CHAIN_ID],
+          showQrModal: true,
+          rpc: { [BASE_CHAIN_ID]: "https://mainnet.base.org" },
+        });
+
+        await wcProvider.enable();
+
+        provider    = new ethers.BrowserProvider(wcProvider);
+        signer      = await provider.getSigner();
+        userAddress = await signer.getAddress();
+
+        setStatus("✅ Wallet terhubung: " + userAddress);
+        connectBtn.style.display = "none";
+        mintBtn.style.display    = "inline-block";
+      } catch (err) {
+        console.error(err);
+        setStatus("❌ Gagal konek wallet: " + (err.message || err));
+      }
+    }
+
+    async function mintToken() {
+      try {
+        if (!signer) {
+          setStatus("⚠️ Hubungkan wallet terlebih dahulu.");
+          return;
+        }
+
+        const token = new ethers.Contract(
+          USDC_ADDRESS,
+          ["function transfer(address to, uint256 amount) public returns (bool)"],
+          signer
+        );
+
+        const amount = ethers.parseUnits("1", USDC_DECIMALS);
+        setStatus("💳 Mengirim 1 USDC ke " + RECIPIENT + "...");
+        const tx = await token.transfer(RECIPIENT, amount);
+
+        setStatus("⏳ Menunggu konfirmasi transaksi...\nTx hash: " + tx.hash);
+        const receipt = await tx.wait();
+
+        if (receipt.status === 1)
+          setStatus("✅ Transaksi berhasil!\nTx hash: " + receipt.hash);
+        else
+          setStatus("⚠️ Transaksi gagal.");
+      } catch (err) {
+        console.error(err);
+        setStatus("❌ Error: " + (err.message || err));
+      }
+    }
+
+    connectBtn.onclick = connectWallet;
+    mintBtn.onclick    = mintToken;
+  </script>
 </body>
 </html>
