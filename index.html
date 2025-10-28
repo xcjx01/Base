@@ -8,8 +8,9 @@
   <!-- Ethers.js -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js"></script>
 
-  <!-- WalletConnect v2 -->
-  <script src="https://unpkg.com/@walletconnect/ethereum-provider@2.9.0/dist/umd/index.min.js"></script>
+  <!-- Web3Modal (official WalletConnect UI) -->
+  <script src="https://unpkg.com/@web3modal/wagmi@3.5.6/dist/index.umd.js"></script>
+  <script src="https://unpkg.com/viem@1.21.4/dist/viem.umd.js"></script>
 
   <style>
     body {
@@ -23,8 +24,8 @@
       margin: 0;
     }
     .card {
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(12px);
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(8px);
       border-radius: 16px;
       padding: 24px;
       text-align: center;
@@ -52,7 +53,6 @@
     }
   </style>
 </head>
-
 <body>
   <div class="card">
     <h1>Mint $SANEX</h1>
@@ -62,51 +62,69 @@
     <div class="status" id="status">Menunggu koneksi wallet...</div>
   </div>
 
-  <script>
-    const PROJECT_ID     = "d2f45a96186ebbd40a192aa7c347fbe7";
-    const BASE_CHAIN_ID  = 8453;
-    const RECIPIENT      = "0x62Ae4503A0430D94ACebF3C3427a940E85511111";
-    const USDC_ADDRESS   = "0x833589fCD6eDb6E08f4c7C32d4f71b54bdA02913"; // USDC on Base
-    const USDC_DECIMALS  = 6;
+  <script type="module">
+    const PROJECT_ID = "d2f45a96186ebbd40a192aa7c347fbe7";
+    const BASE_CHAIN_ID = 8453;
+    const RECIPIENT = "0x62Ae4503A0430D94ACebF3C3427a940E85511111";
+    const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32d4f71b54bdA02913";
+    const USDC_DECIMALS = 6;
 
-    let provider, signer, userAddress;
+    const { createWeb3Modal, defaultWagmiConfig, useWeb3ModalAccount, useWeb3ModalProvider } = window.w3m;
+    const { mainnet } = window.viem.chains;
 
+    // Config Base Network
+    const baseNetwork = {
+      id: 8453,
+      name: "Base",
+      rpcUrls: { default: { http: ["https://mainnet.base.org"] } },
+      nativeCurrency: { name: "Base ETH", symbol: "ETH", decimals: 18 }
+    };
+
+    const metadata = {
+      name: "SANEX Mint",
+      description: "Mint $SANEX pakai USDC di jaringan Base",
+      url: window.location.origin,
+      icons: ["https://cryptologos.cc/logos/usd-coin-usdc-logo.png"]
+    };
+
+    const config = defaultWagmiConfig({
+      chains: [baseNetwork],
+      projectId: PROJECT_ID,
+      metadata
+    });
+
+    const modal = createWeb3Modal({
+      wagmiConfig: config,
+      projectId: PROJECT_ID,
+      chains: [baseNetwork],
+      themeMode: "dark"
+    });
+
+    // HTML Elements
     const connectBtn = document.getElementById("connectBtn");
-    const mintBtn    = document.getElementById("mintBtn");
-    const statusEl   = document.getElementById("status");
-    const setStatus  = (msg) => statusEl.textContent = msg;
+    const mintBtn = document.getElementById("mintBtn");
+    const statusEl = document.getElementById("status");
+    const setStatus = (msg) => statusEl.textContent = msg;
 
-    async function connectWallet() {
+    let provider, signer, address;
+
+    connectBtn.addEventListener("click", async () => {
       try {
-        // pastikan EthereumProvider ada
-        if (!window.WalletConnectEthereumProvider) {
-          setStatus("❌ Library WalletConnect gagal dimuat. Coba reload halaman lagi.");
-          return;
-        }
-
-        const wcProvider = await window.WalletConnectEthereumProvider.init({
-          projectId: PROJECT_ID,
-          chains: [BASE_CHAIN_ID],
-          showQrModal: true,
-          rpc: { [BASE_CHAIN_ID]: "https://mainnet.base.org" },
-        });
-
-        await wcProvider.enable();
-
-        provider    = new ethers.BrowserProvider(wcProvider);
-        signer      = await provider.getSigner();
-        userAddress = await signer.getAddress();
-
-        setStatus("✅ Wallet terhubung: " + userAddress);
+        await modal.open();
+        provider = await modal.getProvider();
+        const ethersProvider = new ethers.BrowserProvider(provider);
+        signer = await ethersProvider.getSigner();
+        address = await signer.getAddress();
+        setStatus("✅ Wallet terhubung: " + address);
         connectBtn.style.display = "none";
-        mintBtn.style.display    = "inline-block";
+        mintBtn.style.display = "inline-block";
       } catch (err) {
         console.error(err);
         setStatus("❌ Gagal konek wallet: " + (err.message || err));
       }
-    }
+    });
 
-    async function mintToken() {
+    mintBtn.addEventListener("click", async () => {
       try {
         if (!signer) {
           setStatus("⚠️ Hubungkan wallet terlebih dahulu.");
@@ -134,10 +152,7 @@
         console.error(err);
         setStatus("❌ Error: " + (err.message || err));
       }
-    }
-
-    connectBtn.onclick = connectWallet;
-    mintBtn.onclick    = mintToken;
+    });
   </script>
 </body>
 </html>
