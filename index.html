@@ -1,0 +1,127 @@
+<!doctype html>
+
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mint NFT — Bayar 1 USDC (Base)</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(circle at top, #0f172a, #020617);
+      color: #f1f5f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      max-width: 400px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    }
+    img.nft {
+      width: 100%;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 20px;
+      margin: 0 0 8px;
+    }
+    p {
+      color: #cbd5e1;
+      margin-bottom: 20px;
+    }
+    button {
+      background: linear-gradient(90deg,#2563eb,#14b8a6);
+      color: white;
+      font-weight: 600;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.25s ease;
+    }
+    button:hover { opacity: 0.85; }
+    .status {
+      margin-top: 16px;
+      font-size: 14px;
+      color: #94a3b8;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <p>follow on x @cat_sanex </p>
+    <h1>Mint $SANEX</h1>
+    <p>1 $usdc 5000 $SANEX</p>
+    <button id="mintBtn">Mint Now</button>
+    <div class="status" id="status">Menunggu tindakan...</div>
+  </div>  <script>
+    (async function(){
+      const provider = window.ethereum ? new ethers.providers.Web3Provider(window.ethereum) : null;
+      const statusEl = document.getElementById('status');
+      const mintBtn = document.getElementById('mintBtn');
+
+      const RECIPIENT = '0x62Ae4503A0430D94ACebF3C3427a940E85511111';
+      const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32d4f71b54bdA02913'; // USDC on Base
+      const USDC_DECIMALS = 6;
+      const BASE_CHAIN_ID = 8453;
+      const BASE_CHAIN_HEX = '0x2105';
+
+      function setStatus(msg){ statusEl.textContent = msg; }
+
+      if(!provider){
+        setStatus('connect wallet first!.');
+        mintBtn.disabled = true;
+        return;
+      }
+
+      mintBtn.onclick = async ()=>{
+        try{
+          await provider.send('eth_requestAccounts', []);
+          const network = await provider.getNetwork();
+
+          if(network.chainId !== BASE_CHAIN_ID){
+            setStatus('⏳ Mengganti jaringan ke Base...');
+            try{
+              await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_CHAIN_HEX }] });
+            } catch (err) {
+              setStatus('⚠️ Gagal pindah jaringan. Pastikan jaringan Base ditambahkan di MetaMask.');
+              return;
+            }
+          }
+
+          const signer = provider.getSigner();
+          const erc20Abi = [ 'function transfer(address to, uint256 amount) public returns (bool)' ];
+          const token = new ethers.Contract(USDC_ADDRESS, erc20Abi, signer);
+          const amount = ethers.utils.parseUnits('1', USDC_DECIMALS);
+
+          setStatus('💳 Mengirim 1 USDC ke ' + RECIPIENT + '...');
+          const tx = await token.transfer(RECIPIENT, amount);
+
+          setStatus('⏳ Transaksi dikirim. Menunggu konfirmasi...\nTx hash: ' + tx.hash);
+
+          const receipt = await tx.wait();
+          if(receipt.status === 1){
+            setStatus('✅ Mint berhasil! Tx hash: ' + receipt.transactionHash);
+          } else {
+            setStatus('⚠️ Transaksi gagal.');
+          }
+        } catch (err) {
+          console.error(err);
+          setStatus('❌ Error: ' + (err.message || err));
+        }
+      };
+    })();
+  </script></body>
+</html>
