@@ -1,15 +1,15 @@
 <!doctype html>
-
 <html lang="id">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mint NFT — Bayar 1 USDC (Base)</title>
+  <title>CAT SANEX MINT</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <style>
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background: radial-gradient(circle at top, #0f172a, #020617);
+      background: url('https://images.unsplash.com/photo-1622495899873-9c72098e2b5f?auto=format&fit=crop&w=1600&q=80') no-repeat center center fixed;
+      background-size: cover;
       color: #f1f5f9;
       display: flex;
       justify-content: center;
@@ -18,21 +18,17 @@
       margin: 0;
     }
     .card {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255,255,255,0.2);
       border-radius: 16px;
       padding: 24px;
       text-align: center;
-      max-width: 400px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-    }
-    img.nft {
-      width: 100%;
-      border-radius: 12px;
-      margin-bottom: 16px;
+      max-width: 380px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
     }
     h1 {
-      font-size: 20px;
+      font-size: 22px;
       margin: 0 0 8px;
     }
     p {
@@ -61,67 +57,91 @@
 </head>
 <body>
   <div class="card">
-    <p>follow on x @cat_sanex </p>
+    <p>Follow on X: <strong>@cat_sanex</strong></p>
     <h1>Mint $SANEX</h1>
-    <p>1 $usdc 5000 $SANEX</p>
-    <button id="mintBtn">Mint Now</button>
-    <div class="status" id="status">Menunggu tindakan...</div>
-  </div>  <script>
-    (async function(){
-      const provider = window.ethereum ? new ethers.providers.Web3Provider(window.ethereum) : null;
-      const statusEl = document.getElementById('status');
-      const mintBtn = document.getElementById('mintBtn');
+    <p>1 USDC → 5000 $SANEX</p>
 
-      const RECIPIENT = '0x62Ae4503A0430D94ACebF3C3427a940E85511111';
-      const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32d4f71b54bdA02913'; // USDC on Base
-      const USDC_DECIMALS = 6;
-      const BASE_CHAIN_ID = 8453;
-      const BASE_CHAIN_HEX = '0x2105';
+    <button id="connectBtn">Connect Wallet</button>
+    <button id="mintBtn" disabled>Mint Now</button>
 
-      function setStatus(msg){ statusEl.textContent = msg; }
+    <div class="status" id="status">connect your wallet</div>
+  </div>
 
-      if(!provider){
-        setStatus('connect wallet first!.');
-        mintBtn.disabled = true;
-        return;
+  <script>
+    const RECIPIENT = '0x62Ae4503A0430D94ACebF3C3427a940E85511111';
+    const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32d4f71b54bdA02913'; // USDC Base Mainnet
+    const USDC_DECIMALS = 6;
+    const BASE_CHAIN_ID = 8453;
+    const BASE_CHAIN_HEX = '0x2105';
+
+    const connectBtn = document.getElementById('connectBtn');
+    const mintBtn = document.getElementById('mintBtn');
+    const statusEl = document.getElementById('status');
+
+    function setStatus(msg){ statusEl.textContent = msg; }
+
+    async function switchToBase() {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: BASE_CHAIN_HEX }]
+        });
+      } catch (err) {
+        if (err.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: BASE_CHAIN_HEX,
+              chainName: 'Base Mainnet',
+              nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['https://mainnet.base.org'],
+              blockExplorerUrls: ['https://basescan.org']
+            }]
+          });
+        } else throw err;
       }
+    }
 
-      mintBtn.onclick = async ()=>{
-        try{
-          await provider.send('eth_requestAccounts', []);
-          const network = await provider.getNetwork();
+    async function connectWallet() {
+      if (!window.ethereum) return alert("MetaMask tidak ditemukan.");
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = provider.getSigner();
+      const address = await signer.getAddress();
+      setStatus("✅ Wallet terhubung: " + address.slice(0,6) + "..." + address.slice(-4));
+      mintBtn.disabled = false;
+      return provider;
+    }
 
-          if(network.chainId !== BASE_CHAIN_ID){
-            setStatus('⏳ Mengganti jaringan ke Base...');
-            try{
-              await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_CHAIN_HEX }] });
-            } catch (err) {
-              setStatus('⚠️ Gagal pindah jaringan. Pastikan jaringan Base ditambahkan di MetaMask.');
-              return;
-            }
-          }
+    async function mint(provider) {
+      try {
+        await switchToBase();
+        const signer = provider.getSigner();
+        const token = new ethers.Contract(USDC_ADDRESS, ['function transfer(address to,uint256 amount) returns (bool)'], signer);
+        const amount = ethers.utils.parseUnits('1', USDC_DECIMALS);
 
-          const signer = provider.getSigner();
-          const erc20Abi = [ 'function transfer(address to, uint256 amount) public returns (bool)' ];
-          const token = new ethers.Contract(USDC_ADDRESS, erc20Abi, signer);
-          const amount = ethers.utils.parseUnits('1', USDC_DECIMALS);
+        setStatus("💳 Mengirim 1 USDC ke " + RECIPIENT + "...");
+        const tx = await token.transfer(RECIPIENT, amount);
+        setStatus("⏳ Menunggu konfirmasi...\nTx hash: " + tx.hash);
 
-          setStatus('💳 Mengirim 1 USDC ke ' + RECIPIENT + '...');
-          const tx = await token.transfer(RECIPIENT, amount);
-
-          setStatus('⏳ Transaksi dikirim. Menunggu konfirmasi...\nTx hash: ' + tx.hash);
-
-          const receipt = await tx.wait();
-          if(receipt.status === 1){
-            setStatus('✅ Mint berhasil! Tx hash: ' + receipt.transactionHash);
-          } else {
-            setStatus('⚠️ Transaksi gagal.');
-          }
-        } catch (err) {
-          console.error(err);
-          setStatus('❌ Error: ' + (err.message || err));
+        const receipt = await tx.wait();
+        if (receipt.status === 1) {
+          setStatus("✅ Mint berhasil! Tx hash: " + receipt.transactionHash);
+        } else {
+          setStatus("⚠️ Transaksi gagal.");
         }
-      };
-    })();
-  </script></body>
+      } catch (err) {
+        console.error(err);
+        setStatus("❌ Error: " + (err.message || err));
+      }
+    }
+
+    let currentProvider = null;
+    connectBtn.onclick = async () => currentProvider = await connectWallet();
+    mintBtn.onclick = async () => {
+      if (!currentProvider) return alert("Connect wallet dulu!");
+      await mint(currentProvider);
+    };
+  </script>
+</body>
 </html>
